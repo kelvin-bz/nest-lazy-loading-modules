@@ -3,36 +3,52 @@
 ## Lazy loading vs. Eager loading
 
 ```mermaid
-mindmap
-  root((Lazy Loading vs. Eager Loading))
-    sub("Use Cases")
-      branch("Lazy Loading")
-        Large applications with many modules
-        Serverless environments (e.g., AWS Lambda)
-        Modules with infrequent usage
-        Optional features
-      branch("Eager Loading")
-        Small applications
-        Modules with frequent usage
-        Critical features required at startup
-    sub("Benefits")
-      branch("Lazy Loading")
-        Faster initial load time
-        Reduced memory consumption
-        Improved performance on low-powered devices
-        Better user experience (faster interactions)
-      branch("Eager Loading")
-        Simpler implementation
-        No runtime overhead for dynamic loading
-        All modules available immediately
-        Predictable behavior
-    sub("Drawbacks")
-      branch("Lazy Loading")
-        Increased complexity
-        Potential for "cold starts"
-      branch("Eager Loading")
-        Slower startup time
-        Higher memory consumption 
+flowchart LR
+    A([Lazy Loading vs. Eager Loading]):::root
+
+    A --> B[Use Cases]:::usecase
+    B --> C[Lazy Loading]:::lazyloading
+    B --> D[Eager Loading]:::eagerloading
+
+    C --> C1[Large applications with many modules]:::lazyloading
+    C --> C2["Serverless environments (e.g., AWS Lambda)"]:::lazyloading
+    C --> C3[Modules with infrequent usage]:::lazyloading
+    C --> C4[Optional features]:::lazyloading
+
+    D --> D1[Small applications]:::eagerloading
+    D --> D2[Modules with frequent usage]:::eagerloading
+    D --> D3[Critical features required at startup]:::eagerloading
+
+    A --> E[Benefits]:::benefits
+    E --> F[Lazy Loading]:::lazyloading
+    E --> G[Eager Loading]:::eagerloading
+
+    F --> F1[Faster initial load time]:::lazyloading
+    F --> F2[Reduced memory consumption]:::lazyloading
+    F --> F3[Improved performance on low-powered devices]:::lazyloading
+    F --> F4["Better user experience (faster interactions)"]:::lazyloading
+
+    G --> G1[Simpler implementation]:::eagerloading
+    G --> G2[No runtime overhead for dynamic loading]:::eagerloading
+    G --> G3[All modules available immediately]:::eagerloading
+    G --> G4[Predictable behavior]:::eagerloading
+
+    A --> H[Drawbacks]:::drawbacks
+    H --> I[Lazy Loading]:::lazyloading
+    H --> J[Eager Loading]:::eagerloading
+
+    I --> I1[Increased complexity]:::lazyloading
+    I --> I2["Potential for 'cold starts'"]:::lazyloading
+
+    J --> J1[Slower startup time]:::eagerloading
+    J --> J2[Higher memory consumption]:::eagerloading
+
+    classDef root fill:#f9f9f9,stroke:#333,stroke-width:2px;
+    classDef usecase fill:#d9f7be,stroke:#5b8c00,stroke-width:2px;
+    classDef lazyloading fill:#ffd666,stroke:#d48806,stroke-width:2px;
+    classDef eagerloading fill:#ffccc7,stroke:#cf1322,stroke-width:2px;
+    classDef benefits fill:#91d5ff,stroke:#096dd9,stroke-width:2px;
+    classDef drawbacks fill:#ffecb3,stroke:#ff9800,stroke-width:2px;
 
 ```
 
@@ -111,3 +127,5 @@ Imagine you have a NestJS worker responsible for processing various types of job
 Since each job type has its own dependencies and may not be executed frequently, eager loading all modules at startup could lead to unnecessary resource consumption. Instead, we can use lazy loading to load the required modules only when needed.
 
 
+## Conclusion
+Lazy loading is beneficial for large, modular applications, optimizing performance and resource use. Eager loading suits smaller applications where critical features must be immediately available. Choosing the right approach depends on application size, usage patterns, and performance requirements. Each strategy has its own benefits and drawbacks to consider. Balancing lazy and eager loading can optimize application performance and resource utilization.
