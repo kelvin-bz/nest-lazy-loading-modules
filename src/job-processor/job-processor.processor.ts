@@ -6,7 +6,9 @@ export class JobProcessor {
   @Process('EmailJob')
   async handleEmailJob(job: Job) {
     console.log('Processing EmailJob...');
-    const { EmailJobService } = await import('../jobs/email-job/email-job.service');
+    const { EmailJobService } = await import(
+      '../jobs/email-job/email-job.service'
+    );
     const emailJobService = new EmailJobService();
     emailJobService.handleJob(job.data);
   }
