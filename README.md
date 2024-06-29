@@ -3,52 +3,25 @@
 ## Lazy loading vs. Eager loading
 
 ```mermaid
-flowchart LR
-    A([Lazy Loading vs. Eager Loading]):::root
+flowchart TD
+    A[Lazy Loading vs. Eager Loading]:::root
+    A --> B[Large App or Serverless?]
 
-    A --> B[Use Cases]:::usecase
-    B --> C[Lazy Loading]:::lazyloading
-    B --> D[Eager Loading]:::eagerloading
+    B -- Yes --> C[Lazy Loading]:::lazyloading
+    B -- No --> D[Frequent Use or Critical at Startup?]
 
-    C --> C1[Large applications with many modules]:::lazyloading
-    C --> C2["Serverless environments (e.g., AWS Lambda)"]:::lazyloading
-    C --> C3[Modules with infrequent usage]:::lazyloading
-    C --> C4[Optional features]:::lazyloading
+    D -- Yes --> E[Eager Loading]:::eagerloading
+    D -- No --> C
 
-    D --> D1[Small applications]:::eagerloading
-    D --> D2[Modules with frequent usage]:::eagerloading
-    D --> D3[Critical features required at startup]:::eagerloading
+    C --> F["Benefits:\n- Faster initial load time\n- Reduced memory use\n- Better performance on low-end devices"]:::lazyloading
+    C --> G["Drawbacks:\n- Increased complexity\n- 'Cold start' delays"]:::lazyloading
 
-    A --> E[Benefits]:::benefits
-    E --> F[Lazy Loading]:::lazyloading
-    E --> G[Eager Loading]:::eagerloading
-
-    F --> F1[Faster initial load time]:::lazyloading
-    F --> F2[Reduced memory consumption]:::lazyloading
-    F --> F3[Improved performance on low-powered devices]:::lazyloading
-    F --> F4["Better user experience (faster interactions)"]:::lazyloading
-
-    G --> G1[Simpler implementation]:::eagerloading
-    G --> G2[No runtime overhead for dynamic loading]:::eagerloading
-    G --> G3[All modules available immediately]:::eagerloading
-    G --> G4[Predictable behavior]:::eagerloading
-
-    A --> H[Drawbacks]:::drawbacks
-    H --> I[Lazy Loading]:::lazyloading
-    H --> J[Eager Loading]:::eagerloading
-
-    I --> I1[Increased complexity]:::lazyloading
-    I --> I2["Potential for 'cold starts'"]:::lazyloading
-
-    J --> J1[Slower startup time]:::eagerloading
-    J --> J2[Higher memory consumption]:::eagerloading
+    E --> H["Benefits:\n- Simpler\n- No dynamic loading overhead\n- Predictable"]:::eagerloading
+    E --> I["Drawbacks:\n- Slower startup\n- Higher memory use"]:::eagerloading
 
     classDef root fill:#f9f9f9,stroke:#333,stroke-width:2px;
-    classDef usecase fill:#d9f7be,stroke:#5b8c00,stroke-width:2px;
     classDef lazyloading fill:#ffd666,stroke:#d48806,stroke-width:2px;
     classDef eagerloading fill:#ffccc7,stroke:#cf1322,stroke-width:2px;
-    classDef benefits fill:#91d5ff,stroke:#096dd9,stroke-width:2px;
-    classDef drawbacks fill:#ffecb3,stroke:#ff9800,stroke-width:2px;
 
 ```
 
@@ -120,11 +93,11 @@ graph TD
 
 Imagine you have a NestJS worker responsible for processing various types of jobs:
 
-- EmailJob: Sends promotional emails to customers.
-- DataProcessingJob: Analyzes large datasets for insights.
-- NotificationJob: Pushes notifications to users.
+- **EmailJob**: Sends promotional emails to customers.
+- **DataProcessingJob**: Analyzes large datasets for insights.
+- **NotificationJob**: Pushes notifications to users.
 
-Since each job type has its own dependencies and may not be executed frequently, eager loading all modules at startup could lead to unnecessary resource consumption. Instead, we can use lazy loading to load the required modules only when needed.
+Since each job type has its own dependencies and may not be executed frequently, eager loading all modules at startup could lead to unnecessary resource consumption. Instead, we can use **lazy loading** to load the required modules only when needed.
 
 ## Implementation
 
@@ -154,45 +127,75 @@ nest-lazy-loading-modules
 The JobProcessor class is responsible for processing different types of jobs. We use dynamic imports to load the required job services lazily when a job is processed.
 ```typescript
 // src/job-processor/job-processor.processor.ts
+// src/job-processor/job-processor.processor.ts
 import { Process, Processor } from '@nestjs/bull';
 import { Job } from 'bull';
+import { LazyModuleLoader } from '@nestjs/core';
 
 @Processor('jobQueue')
 export class JobProcessor {
+  constructor(private readonly lazyModuleLoader: LazyModuleLoader) {}
+
   @Process('EmailJob')
   async handleEmailJob(job: Job) {
     console.log('Processing EmailJob...');
-    const { EmailJobService } = await import(
-      '../jobs/email-job/email-job.service'
-    );
-    const emailJobService = new EmailJobService();
+    const { EmailJobModule } = await import(
+      '../jobs/email-job/email-job.module'
+      );
+    const moduleRef = await this.lazyModuleLoader.load(() => EmailJobModule);
+    const emailJobService = moduleRef.get('EmailJobService');
     emailJobService.handleJob(job.data);
   }
 
   @Process('DataProcessingJob')
   async handleDataProcessingJob(job: Job) {
     console.log('Processing DataProcessingJob...');
-    const { DataProcessingJobService } = await import(
-      '../jobs/data-processing-job/data-processing-job.service'
+    const { DataProcessingJobModule } = await import(
+      '../jobs/data-processing-job/data-processing-job.module'
+      );
+    const moduleRef = await this.lazyModuleLoader.load(
+      () => DataProcessingJobModule,
     );
-    const dataProcessingJobService = new DataProcessingJobService();
+    const dataProcessingJobService = moduleRef.get('DataProcessingJobService');
     dataProcessingJobService.handleJob(job.data);
   }
 
   @Process('NotificationJob')
   async handleNotificationJob(job: Job) {
     console.log('Processing NotificationJob...');
-    const { NotificationJobService } = await import(
-      '../jobs/notification-job/notification-job.service'
+    const { NotificationJobModule } = await import(
+      '../jobs/notification-job/notification-job.module'
+      );
+    const moduleRef = await this.lazyModuleLoader.load(
+      () => NotificationJobModule,
     );
-    const notificationJobService = new NotificationJobService();
+    const notificationJobService = moduleRef.get('NotificationJobService');
     notificationJobService.handleJob(job.data);
   }
 }
 
+
 ```
-### Job Service
-Each job service class contains the logic for processing a specific type of job. For example, the EmailJobService class handles the logic for sending promotional emails to customers.
+### Job Module
+
+Each job type has its own module and service class. 
+The service class contains the logic for processing the job.
+
+#### EmailJobModule
+
+```typescript
+// src/jobs/email-job/email-job.module.ts
+import { Module } from '@nestjs/common';
+import { EmailJobService } from './email-job.service';
+
+@Module({
+  providers: [EmailJobService],
+  exports: [EmailJobService],
+})
+export class EmailJobModule {}
+
+```
+#### EmailJobService
 ```typescript
 import { Injectable } from '@nestjs/common';
 
@@ -237,20 +240,67 @@ export class AppService implements OnModuleInit {
 ```
 
 ## TEST
+
+### Install Redis
+
+If you don't have Redis installed, you can install it using the following commands:
+
+On **macOS** using Homebrew:
+```bash
+brew install redis
+```
+
+Start Redis:
+```bash
+brew services start redis
+```
+
+On **Ubuntu**:
+```bash
+sudo apt update
+sudo apt install redis-server
+```
+
+Start Redis:
+```typescript
+sudo service redis-server start
+```
+
+On **Window**
+
+You can download Redis from the official Redis here: [Redis](https://redis.io/docs/latest/operate/oss_and_stack/install/install-redis/install-redis-on-windows/)
+
+#### Verify Redis Installation
+```bash
+redis-cli ping
+```
+### Start Application
+
 Start the application by running the following command:
 ```bash
 npm run start
 ```
 Logs should be displayed in the console, indicating that the application has started successfully and is processing the different types of jobs:
 ```bash
+[Nest] 41298  - 06/29/2024, 6:05:31 PM     LOG [NestFactory] Starting Nest application...
+[Nest] 41298  - 06/29/2024, 6:05:31 PM     LOG [InstanceLoader] BullModule dependencies initialized +8ms
+[Nest] 41298  - 06/29/2024, 6:05:31 PM     LOG [InstanceLoader] DiscoveryModule dependencies initialized +0ms
+[Nest] 41298  - 06/29/2024, 6:05:31 PM     LOG [InstanceLoader] JobProcessorModule dependencies initialized +0ms
+[Nest] 41298  - 06/29/2024, 6:05:31 PM     LOG [InstanceLoader] BullModule dependencies initialized +3ms
+[Nest] 41298  - 06/29/2024, 6:05:31 PM     LOG [InstanceLoader] BullModule dependencies initialized +0ms
+[Nest] 41298  - 06/29/2024, 6:05:31 PM     LOG [InstanceLoader] BullModule dependencies initialized +0ms
+[Nest] 41298  - 06/29/2024, 6:05:31 PM     LOG [InstanceLoader] AppModule dependencies initialized +0ms
 Adding jobs to the queue
-[Nest] 29036  - 06/28/2024, 9:48:55 AM     LOG [NestApplication] Nest application successfully started +16ms
-Processing EmailJob...
-Processing DataProcessingJob...
+[Nest] 41298  - 06/29/2024, 6:05:31 PM     LOG [NestApplication] Nest application successfully started +12ms
+[Nest] 41298  - 06/29/2024, 6:05:31 PM     LOG [LazyModuleLoader] EmailJobModule dependencies initialized
 Handling Email Job with data: {"data":"some data for email job"}
-Handling Data Processing Job with data: {"data":"some data for data processing job"}
+Processing DataProcessingJob...
 Processing NotificationJob...
-Handling Notification Job with data: [object Object]
+[Nest] 41298  - 06/29/2024, 6:05:31 PM     LOG [LazyModuleLoader] DataProcessingJobModule dependencies initialized
+[Nest] 41298  - 06/29/2024, 6:05:31 PM     LOG [LazyModuleLoader] NotificationJobModule dependencies initialized
+Handling Data Processing Job with data: {"data":"some data for data processing job"}
+Handling Notification Job with data: {"data":"some data for notification job"}
+
 ```
 ## Conclusion
 Lazy loading is beneficial for large, modular applications, optimizing performance and resource use. Eager loading suits smaller applications where critical features must be immediately available. Choosing the right approach depends on application size, usage patterns, and performance requirements. Each strategy has its own benefits and drawbacks to consider. Balancing lazy and eager loading can optimize application performance and resource utilization.
