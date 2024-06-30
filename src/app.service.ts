@@ -1,12 +1,13 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+// src/app.service.ts
+import { Injectable } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 
 @Injectable()
-export class AppService implements OnModuleInit {
+export class AppService {
   constructor(@InjectQueue('jobQueue') private readonly jobQueue: Queue) {}
 
-  async onModuleInit() {
+  async triggerJobs() {
     // Adding jobs to the queue
     console.log('Adding jobs to the queue');
     try {

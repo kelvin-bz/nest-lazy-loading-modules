@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bull';
 import { AppService } from './app.service';
 import { JobProcessorModule } from './job-processor/job-processor.module';
+import { AppController } from "./app.controller";
 
 @Module({
   imports: [
@@ -17,5 +18,6 @@ import { JobProcessorModule } from './job-processor/job-processor.module';
     JobProcessorModule,
   ],
   providers: [AppService],
+  controllers: [AppController],
 })
 export class AppModule {}
